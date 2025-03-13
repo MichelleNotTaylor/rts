@@ -13,7 +13,8 @@ const initialState = {
     data: []
 };
 
-const reducer = (state: RepositoriesState = initialState, 
+const reducer = (
+    state: RepositoriesState = initialState, 
     action: Action 
 ): RepositoriesState => {
     switch (action.type) {
