@@ -1,4 +1,5 @@
 import * as esbuild from 'esbuild-wasm';
+import axios from 'axios';
  
 export const unpkgPathPlugin = () => {
   return {
@@ -6,7 +7,21 @@ export const unpkgPathPlugin = () => {
     setup(build: esbuild.PluginBuild) {
       build.onResolve({ filter: /.*/ }, async (args: any) => {
         console.log('onResole', args);
-        return { path: args.path, namespace: 'a' };
+        if(args.path === 'index.js') {
+            return { path: args.path, namespace: 'a' };
+        } 
+
+        if(args.path.includes('./') || args.path.includes('../')) {
+            return { 
+              path: new URL(args.path, 'https://unpkg.com' + args.resolveDir + '/').href, 
+              namespace: 'a' 
+            };
+        }
+
+        return {
+          namespace: 'a',
+          path: `https://unpkg.com/${args.path}`,
+        };
       });
  
       build.onLoad({ filter: /.*/ }, async (args: any) => {
@@ -16,16 +31,19 @@ export const unpkgPathPlugin = () => {
           return {
             loader: 'jsx',
             contents: `
-              import message from './message';
-              console.log(message);
+              import React, {useState} from 'react@16.0.0';
+              console.log(React, useState);
             `,
           };
-        } else {
-          return {
-            loader: 'jsx',
-            contents: 'export default "hi there!"',
-          };
         }
+
+        const { data, request } = await axios.get(args.path);
+        console.log(request);
+        return {
+            loader: 'jsx',
+            contents: data,
+            resolveDir: new URL('./', request.responseURL).pathname,
+        };
       });
     },
   };
